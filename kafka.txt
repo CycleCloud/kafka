@@ -335,6 +335,7 @@ Autoscale = false
 
         kafka.broker.zookeeper.connect = localhost:2182
         kafka.broker.hostname = localhost
+        kafka.broker.hostname = 9092
         kafka.init_style = systemd
         kafka.automatic_start = true
         kafka.automatic_restart = false

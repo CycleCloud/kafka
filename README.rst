@@ -16,10 +16,10 @@ Usage
 
 2. Create the cluster via the GUI.
 
-3. Start the cluster and log in to ``ensemble-1``.
+3. Start the cluster and log in to ``broker-1``.
 ::
 
-    $ cyclecloud connect ensemble-1
+    $ cyclecloud connect broker-1
     [cyclecloud@ip-10-142-234-201 ~]$ sudo su - kafka
     -bash-4.1$ cd /opt/kafka
     -bash-4.1$ bin/kafka-topics.sh --create --zookeeper localhost:2182 --replication-factor 1 --partitions 1 --topic test

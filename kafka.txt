@@ -138,9 +138,9 @@ Order = 30
         Widget.Label = Enable Termination for all instances?
 
 
-        [[[parameter ensemble_machine_type]]]
-        Label = ZooKeeper MachineType
-        Description = The machine type for the ZooKeeper members
+        [[[parameter broker_machine_type]]]
+        Label = Kafka MachineType
+        Description = The machine type for the Kafka Brokers
         ParameterType = Cloud.MachineType
         Config.Provider = AWS
             [[[[record Config.ProviderDefaults]]]]
@@ -286,7 +286,7 @@ Autoscale = false
         [[[configuration]]]
         # You can specify Chef attributes using dot notation if needed. For example, you
         # can use it to change the default CycleServer admin password (defaults to cluster name):
-        cyclecloud.cluster.user.name = zookeeper
+        cyclecloud.cluster.user.name = kafka
         # cyclecloud.cluster.user.password = abc;123
         cyclecloud.cluster.user.uid = 55555
         cyclecloud.cluster.user.gid = 55555    
@@ -310,8 +310,8 @@ Autoscale = false
         PublicPort = 8652        
 
         
-    [[nodearray ensemble]]
-    MachineType = $ensemble_machine_type
+    [[nodearray broker]]
+    MachineType = $broker_machine_type
     InitialCount = ${ifThenElse(ensemble_size > quorum_size, ensemble_size, quorum_size)}
     
     # AWS Spot Market bid prices - uncomment and enter the bid price for the nodes to provision

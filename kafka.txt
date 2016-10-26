@@ -1,0 +1,350 @@
+##############################
+## Kafka Configuration File ##
+##############################
+
+[parameters General Settings]
+Order = 10
+
+    [[parameters Cloud Service Provider Configuration]]
+    Description = Configure the Cloud Provider account options.
+    Order = 10
+
+        [[[parameter CloudProvider]]]
+        Label = Cloud Provider
+        ParameterType = Cloud.Provider
+
+        [[[parameter Credentials]]]
+        Description = The credentials for the cloud provider
+        ParameterType = Cloud.Credentials
+
+        [[[parameter Region]]]
+        Label = Region
+        Description = Deployment Location
+        ParameterType = Cloud.Region
+
+
+[parameters Cluster Software]
+Order = 20
+    
+    [[parameters Software]]
+    Description = "Specify the scheduling software, and base OS installed on all nodes, and optionally the cluster-init and chef versions from your Locker."
+    Order = 10
+    
+        [[[parameter ImageName]]]
+        Label = Base OS
+        ParameterType = Cloud.Image
+        Config.OS = linux
+        DefaultValue = cycle.image.centos7
+    
+        [[[parameter ClusterInit]]]
+        Label = Cluster-Init
+        DefaultValue = =undefined
+        Description = "If set, apply a cluster-init configuration.  Leave blank to run without cluster-init."
+        ParameterType = Cloud.ClusterInit
+
+        [[[parameter ChefRepoVersion]]]
+        Label = Custom Chef
+        DefaultValue = kafka/0.1/
+        Description = "If set, use a custom chef version from your Locker."
+        ParameterType = Cloud.ChefRepo
+        
+    [[parameters Node Access]]
+    Description = "Specify the credentials required for access to the node.  The Keypair Path specifies the path on local machines for cyclecloud CLI access."
+    Order = 20
+
+        [[[parameter awsKeypair]]]
+        Label = AWS Keypair
+        Description = The keypair to connect with
+        ParameterType = AWS.Keypair
+        DefaultValue = cyclecloud
+        Conditions.Required := CloudProvider === "AWS"
+        Conditions.Excluded := CloudProvider !== "AWS"
+
+        [[[parameter keypairLocation]]]
+        Label = Keypair Path
+        Description = The path to the keypair
+        DefaultValue = ~/.ssh/cyclecloud.pem
+        Required = True
+
+        [[[parameter Username]]]
+        Label = Username
+        Description = The username for the built-in local user on all nodes for direct ssh access.
+        DefaultValue = cyclecloud
+        Conditions.Required := (CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+        Conditions.Excluded := !(CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+
+        [[[parameter Password]]]
+        Label = Password
+        ParameterType = Password
+        Description = The password for the built-in local user on all nodes for direct ssh access.
+        Conditions.Required := (CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+        Conditions.Excluded := !(CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+
+[parameters Zookeeper]
+Order = 25
+    
+    [[parameter zookeeper_description]]
+    HideLabel = true
+    Config.Plugin = pico.widget.HtmlTemplateWidget
+    Config.Template = "Adjust the ZooKeeper configuration options.<br/>Recommended only for advanced users."
+
+    [[parameter quorum_size]]
+    Label = Quorum Size
+    Description = The min. number of live ZooKeeper ensemble members required to achieve quorum.
+    DefaultValue = 2
+    Config.Plugin = pico.form.NumberTextBox
+    Config.MinValue = 1
+    Config.MaxValue = 6
+    Config.IntegerOnly = true
+    
+    [[parameter ensemble_size]]
+    Label = Ensemble Size
+    Description = The number of ZooKeeper ensemble members to start initially.
+    DefaultValue = 3
+    Config.Plugin = pico.form.NumberTextBox
+    Config.MinValue = 1
+    Config.MaxValue = 10
+    Config.IntegerOnly = true
+
+
+[parameters Compute Backend]
+Order = 30
+
+    [[parameters Instance Types]]
+    Description = "The cluster, in this case, has two roles: the scheduler master-node with shared filer and the execute hosts. Configure which instance types to use based on the requirements of your application."
+    Order = 10
+
+        [[[parameter proxy_description]]]
+        HideLabel = true
+        Config.Plugin = pico.widget.HtmlTemplateWidget
+        Config.Template = "The proxy host may be used to enable firewall traversal between the cluster and CycleCloud.   In VPC environments with virtual network, this node is not required."
+
+        [[[parameter proxy_machine_type]]]
+        Label = Network Proxy MachineType
+        Description = The machine type for the optional proxy host
+        ParameterType = Cloud.MachineType
+        Config.Provider = AWS
+            [[[[record Config.ProviderDefaults]]]]
+            AWS = m3.large 
+            Azure = Standard_A4
+            Azure_classic = A4
+            GCP = n1-standard-4
+
+
+        [[[parameter enable_termination_protection]]]
+        Label = Termination Prot.?
+        DefaultValue = false
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Enable Termination for all instances?
+
+
+        [[[parameter ensemble_machine_type]]]
+        Label = ZooKeeper MachineType
+        Description = The machine type for the ZooKeeper members
+        ParameterType = Cloud.MachineType
+        Config.Provider = AWS
+            [[[[record Config.ProviderDefaults]]]]
+            AWS = m3.large 
+            Azure = Standard_A4
+            Azure_classic = A4
+            GCP = n1-standard-4
+
+
+    [[parameters AWS Spot Market]]
+    Description = "To use spot instances check the box and enter a bid price below, otherwise on-demand instances will be used"
+    Conditions.Excluded := CloudProvider !== "AWS"
+    Order = 30
+
+        [[[parameter awsUseSpot]]]
+        Label = Use Spot Instances
+        DefaultValue = false
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Use spot instances for execute hosts
+
+        [[[parameter awsBidPrice]]]
+        Label = Bid Price   
+        Config.Plugin = pico.form.NumberTextBox
+        Config.MinValue = 0
+        Config.MaxValue = 5.0
+        Description = How much to pay for execute instances
+        Conditions.Excluded := awsUseSpot isnt true
+
+
+    [[parameters GCP Preemptible Instances]]
+    Description = "To use premptible instances check the box, otherwise regular instances will be used"
+    Conditions.Excluded := CloudProvider !== "GCP"
+    Order = 40
+
+        [[[parameter Preemptible]]]
+        Label = Use Preemptible Instances
+        DefaultValue = false
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Use preemptible instances for execute hosts
+
+[parameters Networking]
+Order = 40
+    
+    [[parameters General]]
+    Order = 10
+
+        [[[parameter ReturnProxy]]]
+        Label = Return Proxy
+        DefaultValue = true
+        Widget.Plugin = pico.form.BooleanCheckBox
+        Widget.Label = Allow cloud instances to report back their state
+
+    
+    [[parameters AWS]]
+    Order = 20
+    # Conditions.Excluded := CloudProvider !== "AWS"
+    Description = "Optional use of VPC components. Without specifying a subnet or security group the hosts will be started in the default region, VPC and security group."
+
+        [[[parameter awsSubnetId]]]
+        Label = VPC Subnet
+        Description = The subnet ID to use when in a VPC environment
+        ParameterType = AWS.Subnet
+
+        [[[parameter awsSecurityGroups]]]
+        Label = Security Group(s)
+        Description = "The security group ID(s) to use when in a VPC environment. Can be comma-separated list for multiple security groups. eg: sg-a0000001, sg-a0000002."
+        ParameterType = AWS.SecurityGroupList
+
+    [[parameters GCP Network]]
+    Order = 30
+    Conditions.Excluded := CloudProvider !== "GCP"
+    Description = "Apply Instance Tags"
+
+        [[[parameter gcpTags]]]
+        Label = Tags
+        Description = GCP Instance Tags
+        ParameterType = StringList
+
+    [[parameters Azure Virtual Network Configuration]]
+    Order = 40
+    Conditions.Excluded := CloudProvider !== "Azure"
+
+        [[[parameter azureSubnetId]]]
+        Label = Subnet ID
+        Description = Subnet Resource Path (ResourceGroup/VirtualNetwork/Subnet)
+        Conditions.Required := CloudProvider === "Azure"
+        Conditions.Excluded := CloudProvider !== "Azure"
+        ParameterType = Azure.Subnet
+
+    [[parameters Azure Classic Virtual Network Configuration]]
+    Order = 50
+    Conditions.Excluded := CloudProvider !== "Azure_classic"
+
+        [[[parameter azureVirtualNetwork]]]
+        Label = VNet Name
+        Description = Azure Virtual Network
+        Conditions.Required := CloudProvider === "Azure_classic"
+        Conditions.Excluded := CloudProvider !== "Azure_classic"
+
+        [[[parameter azureSubnetName]]]
+        Label = Subnet
+        Description = Azure subnet name
+        Conditions.Required := CloudProvider === "Azure_classic"
+        Conditions.Excluded := CloudProvider !== "Azure_classic"
+
+[cluster Kafka]
+FormLayout = selectionpanel
+IconUrl = http://download.cyclecomputing.com/logos/kafka-192x192.png
+
+# Enable/disable autoscaling
+Autoscale = false
+
+    # defines default values used for all nodes. This is inherited automatically by all nodes.
+    # You can create other nodes like this by adding Abstract = true to them and adding
+    # Extends = foo to the nodes that should inherit the definitions from foo.
+    [[node defaults]]
+    Credentials = $Credentials    
+
+    ImageName = $ImageName
+    ClusterInit = $ClusterInit
+    ChefRepoVersion = $ChefRepoVersion
+    SubnetId = ${IfThenElse(CloudProvider==="Azure", azureSubnetId, awsSubnetId)}
+	 Region = $Region
+
+    # EC2
+    KeyPair = $awsKeypair
+    KeyPairLocation = $keypairLocation
+    SecurityGroups = $awsSecurityGroups
+
+    # Azure
+    
+    # Azure Classic
+    Azure.VirtualNetwork = ${IfThenElse(CloudProvider==="Azure_classic", azureVirtualNetwork, undefined())}
+    Azure.SubnetName = ${IfThenElse(CloudProvider==="Azure_classic", azureSubnetName, undefined())}
+    Azure.IaaS = ${IfThenElse(CloudProvider==="Azure_classic", true, undefined())}
+    
+    Username = $Username
+    Password = $Password
+
+    # GCP
+    TagList = $gcpTags
+
+        [[[configuration]]]
+        # You can specify Chef attributes using dot notation if needed. For example, you
+        # can use it to change the default CycleServer admin password (defaults to cluster name):
+        cyclecloud.cluster.user.name = zookeeper
+        # cyclecloud.cluster.user.password = abc;123
+        cyclecloud.cluster.user.uid = 55555
+        cyclecloud.cluster.user.gid = 55555    
+
+    [[node proxy]]
+    IsReturnProxy = $ReturnProxy
+    MachineType = $proxy_machine_type
+    
+        [[[configuration]]]
+        run_list = recipe[cganglia::server]
+
+        cyclecloud.discoverable = true
+        
+        # Configure Azure external input endpoints (for example SSH)
+        [[[input-endpoint SSH]]]
+        PrivatePort = 22
+        PublicPort = 22
+
+        [[[input-endpoint ganglia]]]
+        PrivatePort = 8652
+        PublicPort = 8652        
+
+        
+    [[nodearray ensemble]]
+    MachineType = $ensemble_machine_type
+    InitialCount = ${ifThenElse(ensemble_size > quorum_size, ensemble_size, quorum_size)}
+    
+    # AWS Spot Market bid prices - uncomment and enter the bid price for the nodes to provision
+    BidPrice = ${ifThenElse(awsUseSpot == true, awsBidPrice, undefined)}
+
+    # Use GCP Premptible Instances?
+    Preemptible = ${ifThenElse(Preemptible == true, Preemptible, undefined)}
+
+
+        [[[configuration]]]
+        run_list = recipe[jdk], recipe[zookeeper::server], recipe[kafka]      
+
+        cyclecloud.discoverable = true
+        zookeeper.mode = ensemble
+        zookeeper.client.discovery_mechanism = blackboard
+        # quorum must be less than or equal to Count
+        zookeeper.quorum = $quorum_size
+        zookeeper.client_port = 2182
+        zookeeper.max_client_cnxns = 500
+        zookeeper.ready = true
+
+        kafka.broker.zookeeper.connect = localhost:2182
+        kafka.broker.hostname = localhost
+        kafka.init_style = systemd
+        kafka.automatic_start = true
+        kafka.automatic_restart = false
+    
+        # Configure Azure external input endpoints (for example SSH)
+        [[[input-endpoint SSH]]]
+        PrivatePort = 22
+        PublicPort = 22
+
+        [[[input-endpoint ganglia]]]
+        PrivatePort = 8652
+        PublicPort = 8652        
+

@@ -34,8 +34,19 @@ Usage
     -bash-4.1$ bin/kafka-topics.sh --create --zookeeper localhost:2182 --replication-factor 1 --partitions 1 --topic test
     -bash-4.1$ bin/kafka-topics.sh --describe --zookeeper localhost:2182 --topic test
     -bash-4.1$ bin/kafka-topics.sh --create --zookeeper localhost:2182 --replication-factor 3 --partitions 1 --topic my-replicated-topic
-    -bash-4.1$ bin/kafka-topics.sh --describe --zookeeper localhost:2182 --topic my-replicated-topi
+    -bash-4.1$ bin/kafka-topics.sh --describe --zookeeper localhost:2182 --topic my-replicated-topic
     -bash-4.1$ bin/kafka-topics.sh --list --zookeeper 10.171.83.138:2182
+    -bash-4.1$ bin/kafka-console-producer.sh --broker-list localhost:9092 --topic my-replicated-topic
+    test
+    test2
+    test3
+    ...
+    ^C
+    -bash-4.1$ bin/kafka-console-consumer.sh --zookeeper localhost:2182 --from-beginning --topic my-replicated-topic
+    test
+    test2
+    test3
+    ^C
 
 5. Start a cluster with Kafka Clients to use the new Kafka cluster
 
@@ -43,4 +54,5 @@ TODO
 ----
 
 1. Fix names to be kafka-esque rather than zookeeper oriented
+2. Install a Java Kafka example for the kafka user
 

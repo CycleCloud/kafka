@@ -333,6 +333,11 @@ Autoscale = false
         zookeeper.max_client_cnxns = 500
         zookeeper.ready = true
 
+        kafka.version = 0.10.1.0
+        kafka.scala_version = 2.11
+        kafka.checksum = 6d9532ae65c9c8126241e7b928b118aaa3a694dab08069471f0e61f4f0329390
+        kafka.md5_checksum = 45c7d032324e16c2e19a7d904a4d65c6
+        kafka.broker.id = -1
         kafka.broker.zookeeper.connect = localhost:2182
         kafka.broker.hostname = localhost
         kafka.broker.port = 9092

@@ -215,7 +215,7 @@ Order = 50
 
 
 
-[cluster kafka]
+[cluster Kafka]
 FormLayout = selectionpanel
 IconUrl = http://download.cyclecomputing.com/logos/kafka-192x192.png
 
@@ -233,11 +233,11 @@ Autoscale = false
     TerminationProtection = $EnableTerminationProtection
     ImageName = $ImageName
 
-    # Cycle Examples Repository
-    Locker=cyclecloud-mirrors
-
     # Chef and Locker Config
     Credentials = $Credentials
+
+    # Cycle Examples Repository
+    Locker=cyclecloud-mirrors
 
     # EC2
     AWS.InstanceProfileArn=$ZookeeperAccessArn

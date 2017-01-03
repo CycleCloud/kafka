@@ -71,17 +71,8 @@ Description = Specify the scheduling software, and base OS installed on all node
     Description = Select the Redis project spec version
 
     [[parameters Zookeeper]]
-    Description = Adjust the Kafka and ZooKeeper configuration options.  Recommended only for advanced users.
+    Description = Adjust the Kafka and ZooKeeper configuration options.  (Quorum Size = ceil(EnsembleSize/2))
     Order = 10
-
-        [[[parameter QuorumSize]]]
-        Label = Quorum Size
-        Description = The min. number of live ZooKeeper ensemble members required to achieve quorum.
-        DefaultValue = 2
-        Config.Plugin = pico.form.NumberTextBox
-        Config.MinValue = 1
-        Config.MaxValue = 6
-        Config.IntegerOnly = true
 
         [[[parameter EnsembleSize]]]
         Label = Ensemble Size
@@ -242,6 +233,9 @@ Autoscale = false
     TerminationProtection = $EnableTerminationProtection
     ImageName = $ImageName
 
+    # Cycle Examples Repository
+    Locker=cyclecloud-mirrors
+
     # Chef and Locker Config
     Credentials = $Credentials
 
@@ -290,7 +284,7 @@ Autoscale = false
 
     [[nodearray broker]]
     MachineType = $BrokerMachineType
-    InitialCount = ${ifThenElse(EnsembleSize > QuorumSize, EnsembleSize, QuorumSize)}
+    InitialCount = $EnsembleSize
     
 
     BidPricePerCore = $BrokerBidPricePerCore
@@ -305,8 +299,7 @@ Autoscale = false
 
         cyclecloud.discoverable = true
         zookeeper.mode = ensemble
-        # quorum must be less than or equal to Count
-        zookeeper.quorum = $QuorumSize
+        zookeeper.ensemble_size = $EnsembleSize
 
         kafka.version = 0.10.1.0
         kafka.scala_version = 2.11

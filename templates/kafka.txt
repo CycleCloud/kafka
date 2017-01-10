@@ -225,7 +225,7 @@ Autoscale = false
      SubnetId = ${IfThenElse(CloudProvider==="Azure", AzureSubnetId, AwsProxySubnetId)}
 
          [[[configuration]]]
-         run_list = recipe[cganglia::server]
+         run_list = recipe[cganglia::server], recipe[kafka-client]
 
          cyclecloud.discoverable = true
         

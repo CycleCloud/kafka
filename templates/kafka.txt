@@ -70,7 +70,7 @@ Description = Specify the scheduling software, and base OS installed on all node
 
         [[[parameter ProjectVersion]]]
         Label = Project Version
-        DefaultValue = 1.0.0
+        DefaultValue = 1.1.0
         Description = Select the Kafka project spec version
         Hidden = true
 
@@ -187,10 +187,6 @@ Autoscale = false
     # You can create other nodes like this by adding Abstract = true to them and adding
     # Extends = foo to the nodes that should inherit the definitions from foo.
     [[node defaults]]
-    Project = kafka
-    ProjectVersion = $ProjectVersion
-    ProjectSpec = kafka
-    
     TerminationProtection = $EnableTerminationProtection
     ImageName = $ImageName
 
@@ -217,7 +213,9 @@ Autoscale = false
         cyclecloud.cluster.user.name = kafka
         # cyclecloud.cluster.user.password = abc;123
         cyclecloud.cluster.user.uid = 55555
-        cyclecloud.cluster.user.gid = 55555    
+        cyclecloud.cluster.user.gid = 55555
+
+        [[[cluster-init kafka:kafka:$ProjectVersion]]]
 
      [[node proxy]]
      IsReturnProxy = true

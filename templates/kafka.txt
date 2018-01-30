@@ -127,7 +127,7 @@ Order = 30
     Label = Term Protection
     DefaultValue = false
     Widget.Plugin = pico.form.BooleanCheckBox
-    Widget.Label = Enable Termination Protection
+    Widget.Label = Enable Termination Protection?
 
     [[parameter BrokerGcpTagList]]
     Label = Tag List
@@ -182,6 +182,11 @@ Order = 50
     Description = No custom configuration required.
     Conditions.Excluded := CloudProvider !== "GCP"
 
+    [[parameter ExecuteNodesPublic]]
+    Label = Public Execute
+    DefaultValue = false
+    Widget.Plugin = pico.form.BooleanCheckBox
+    Widget.Label = Make the Kafka broker instances accessible from the Internet
 
 
 [cluster Kafka]
@@ -252,6 +257,9 @@ Autoscale = false
     
     TagList = $BrokerGcpTagList
 
+
+         [[[network-interface]]]
+         AssociatePublicIpAddress = $ExecuteNodesPublic
 
         [[[configuration]]]
 	run_list = recipe[cshared::client], recipe[cuser], recipe[cganglia::client]

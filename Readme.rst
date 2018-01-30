@@ -154,7 +154,7 @@ F. Testing the Kafka Cluster
 ::
 
     $ cyclecloud connect broker-1
-    [cyclecloud@ip-10-142-234-201 ~]$ sudo su - kafka
+    [cyclecloud@ip-10-142-234-201 ~]$ sudo su - kafkauser
     -bash-4.1$ cd /opt/kafka
     -bash-4.1$ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic test
     -bash-4.1$ bin/kafka-topics.sh --describe --zookeeper localhost:2181 --topic test

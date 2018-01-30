@@ -12,6 +12,7 @@ Order = 10
         [[[parameter CloudProvider]]]
         Label = Cloud Provider
         ParameterType = Cloud.Provider
+	DefaultValue = azure
 
         [[[parameter Credentials]]]
         Description = The credentials for the cloud provider
@@ -21,6 +22,7 @@ Order = 10
         Label = Region
         Description = Deployment Location
         ParameterType = Cloud.Region
+	DefaultValue = westus2
 
     [[parameters Node Access]]
     Description = "Specify the credentials required for access to the node.  The Keypair Path specifies the path on local machines for cyclecloud CLI access."
@@ -70,8 +72,14 @@ Description = Specify the scheduling software, and base OS installed on all node
 
         [[[parameter ProjectVersion]]]
         Label = Project Version
-        DefaultValue = 1.1.0
-        Description = Select the Kafka project spec version
+        DefaultValue = 1.2.0
+        Description = Select the Kafka project version
+        Hidden = true
+
+        [[[parameter ZookeeperProjectVersion]]]
+        Label = ZK Project Version
+        DefaultValue = 1.2.0
+        Description = Select the Zookeeper project version
         Hidden = true
 
     [[parameters Zookeeper]]
@@ -193,9 +201,6 @@ Autoscale = false
     # Chef and Locker Config
     Credentials = $Credentials
 
-    # Cycle Examples Repository
-    Locker=cyclecloud-mirrors
-
     # EC2
     AWS.InstanceProfileArn=$ZookeeperAccessArn
     KeyPair = $AwsKeypair
@@ -210,12 +215,14 @@ Autoscale = false
         [[[configuration]]]
         # You can specify Chef attributes using dot notation if needed. For example, you
         # can use it to change the default CycleServer admin password (defaults to cluster name):
-        cyclecloud.cluster.user.name = kafka
-        # cyclecloud.cluster.user.password = abc;123
+        cyclecloud.cluster.user.name = kafkauser
         cyclecloud.cluster.user.uid = 55555
         cyclecloud.cluster.user.gid = 55555
 
-        [[[cluster-init kafka:kafka:$ProjectVersion]]]
+        [[[cluster-init zookeeper:default:$ZookeeperProjectVersion]]]
+	Locker = cyclecloud
+        [[[cluster-init kafka:default:$ProjectVersion]]]
+	Locker = cyclecloud
 
      [[node proxy]]
      IsReturnProxy = true
@@ -223,7 +230,7 @@ Autoscale = false
      SubnetId = ${IfThenElse(CloudProvider==="Azure", AzureSubnetId, AwsProxySubnetId)}
 
          [[[configuration]]]
-         run_list = recipe[cganglia::server], recipe[kafka-client]
+         run_list = recipe[cshared::directories], recipe[cuser], recipe[cshared::server], recipe[cganglia::server], recipe[cganglia::client]
 
          cyclecloud.discoverable = true
         
@@ -236,7 +243,9 @@ Autoscale = false
          PrivatePort = 8652
          PublicPort = 8652        
 
-
+        [[[cluster-init kafka:client:$ProjectVersion]]]
+	Locker = cyclecloud
+	
     [[nodearray broker]]
     MachineType = $BrokerMachineType
     InitialCount = $EnsembleSize
@@ -245,8 +254,8 @@ Autoscale = false
 
 
         [[[configuration]]]
-        run_list = recipe[jdk], recipe[zookeeper::server], recipe[kafka]      
-
+	run_list = recipe[cshared::client], recipe[cuser], recipe[cganglia::client]
+	
         cyclecloud.discoverable = true
         zookeeper.mode = ensemble
         zookeeper.ensemble_size = $EnsembleSize
@@ -273,3 +282,8 @@ Autoscale = false
         PrivatePort = 8652
         PublicPort = 8652        
 
+        [[[cluster-init zookeeper:server:$ZookeeperProjectVersion]]]
+	Locker = cyclecloud
+	
+        [[[cluster-init kafka:broker:$ProjectVersion]]]
+	Locker = cyclecloud

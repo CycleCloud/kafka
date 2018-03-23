@@ -1,6 +1,7 @@
 *.class
 *.pyc
 *~
+params.json
 .project
 .settings
 .classpath

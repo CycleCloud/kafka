@@ -3,68 +3,52 @@
 # Libraries:: helpers
 #
 
-def kafka_base
+def kafka_version_name
   %(kafka_#{node['kafka']['scala_version']}-#{node['kafka']['version']})
 end
 
-def kafka_tar_gz
-  [kafka_base, 'tgz'].join('.')
-end
-
-def kafka_local_download_path
-  ::File.join(Chef::Config.file_cache_path, kafka_tar_gz)
-end
-
-def kafka_target_path
-  ::File.join(node['kafka']['build_dir'], kafka_base)
-end
-
 def kafka_jar_path
-  ::File.join(node['kafka']['install_dir'], 'libs', %(#{kafka_base}.jar))
+  ::File.join(node['kafka']['install_dir'], 'libs', %(#{kafka_version_name}.jar))
 end
 
 def kafka_installed?
-  ::File.exists?(node['kafka']['install_dir']) && ::File.exists?(kafka_jar_path)
-end
-
-def kafka_download_uri(filename)
-  [node['kafka']['base_url'], node['kafka']['version'], filename].join('/')
+  ::File.exist?(node['kafka']['install_dir']) && ::File.exist?(kafka_jar_path)
 end
 
 def kafka_init_style
-  node['kafka']['init_style'].to_sym
+  (style = node['kafka']['init_style']) && style.to_sym
 end
 
 def kafka_init_opts
-  @kafka_init_opts ||= Hash.new.tap do |opts|
+  @kafka_init_opts ||= {}.tap do |opts|
     case kafka_init_style
     when :sysv
-      opts[:env_path] = value_for_platform_family({
+      opts[:env_path] = value_for_platform_family(
         'debian' => '/etc/default/kafka',
         'default' => '/etc/sysconfig/kafka',
-      })
-      opts[:source] = value_for_platform_family({
+      )
+      opts[:source] = value_for_platform_family(
         'debian' => 'sysv/debian.erb',
         'default' => 'sysv/default.erb',
-      })
+      )
       opts[:script_path] = '/etc/init.d/kafka'
       opts[:permissions] = '755'
     when :upstart
       opts[:env_path] = '/etc/default/kafka'
-      opts[:source] = value_for_platform_family({
+      opts[:source] = value_for_platform_family(
         'default' => 'upstart/default.erb',
-      })
+      )
       opts[:script_path] = '/etc/init/kafka.conf'
       opts[:provider] = ::Chef::Provider::Service::Upstart
       opts[:permissions] = '644'
     when :systemd
-      opts[:env_path] = value_for_platform_family({
+      opts[:env_path] = value_for_platform_family(
         'debian' => '/etc/default/kafka',
         'default' => '/etc/sysconfig/kafka',
-      })
-      opts[:source] = value_for_platform_family({
-        'default' => 'systemd/default.erb'
-      })
+      )
+      opts[:source] = value_for_platform_family(
+        'default' => 'systemd/default.erb',
+      )
       opts[:script_path] = '/etc/systemd/system/kafka.service'
       opts[:provider] = ::Chef::Provider::Service::Systemd
       opts[:permissions] = '644'
@@ -87,38 +71,25 @@ def kafka_service_actions
 end
 
 def kafka_log_dirs
-  dirs = []
-  dirs += Array(node['kafka']['broker']['log.dirs'])
-  dirs += Array(node['kafka']['broker'].fetch(:log_dirs, []))
-  dirs += Array(node['kafka']['broker'].fetch(:log, {}).fetch(:dirs, []))
-  dirs.uniq!
-  dirs
-end
-
-def broker_attribute?(*parts)
-  parts = parts.map(&:to_s)
-  broker = node['kafka']['broker']
-  if broker.attribute?(parts.join('.'))
-    return true
-  end
-  if broker.attribute?(parts.join('_'))
-    return true
-  end
-  key = parts.pop
-  r = parts.reduce(broker) { |b, p| b.fetch(p, b) }
-  r.attribute?(key)
+  Array(node['kafka']['broker']['log.dirs'])
 end
 
 def fetch_broker_attribute(*parts)
-  parts = parts.map(&:to_s)
-  broker = node['kafka']['broker']
-  if broker.attribute?(parts.join('.'))
-    return broker[parts.join('.')]
-  end
-  if broker.attribute?(parts.join('_'))
-    return broker[parts.join('_')]
-  end
-  key = parts.pop
-  r = parts.reduce(broker) { |b, p| b.fetch(p, b) }
-  r[key]
+  node['kafka']['broker'][parts.map(&:to_s).join('.')]
+end
+
+def kafka_service_resource
+  kafka_runit? ? 'runit_service[kafka]' : 'service[kafka]'
+end
+
+def kafka_runit?
+  kafka_init_style == :runit
+end
+
+def kafka_systemd?
+  kafka_init_style == :systemd
+end
+
+def kafka_env
+  Kafka::Env.new(node['kafka'].to_hash)
 end

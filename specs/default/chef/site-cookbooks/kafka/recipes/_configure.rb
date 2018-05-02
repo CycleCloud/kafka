@@ -18,7 +18,7 @@ template ::File.join(node['kafka']['config_dir'], 'log4j.properties') do
   helpers(Kafka::Log4J)
   variables(config: node['kafka']['log4j'])
   if restart_on_configuration_change?
-    notifies :create, 'ruby_block[coordinate-kafka-start]', :immediately
+    notifies :create, 'ruby_block[coordinate-kafka-start]', :delayed
   end
 end
 
@@ -26,10 +26,11 @@ template ::File.join(node['kafka']['config_dir'], 'server.properties') do
   source 'server.properties.erb'
   owner node['kafka']['user']
   group node['kafka']['group']
-  mode '644'
+  mode '600'
+  sensitive true
   helpers(Kafka::Configuration)
   variables(config: node['kafka']['broker'].sort_by(&:first))
   if restart_on_configuration_change?
-    notifies :create, 'ruby_block[coordinate-kafka-start]', :immediately
+    notifies :create, 'ruby_block[coordinate-kafka-start]', :delayed
   end
 end

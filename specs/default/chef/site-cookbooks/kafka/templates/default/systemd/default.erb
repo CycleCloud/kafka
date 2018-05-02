@@ -6,15 +6,13 @@ After=network-online.target
 [Service]
 User=<%= @user %>
 EnvironmentFile=<%= @env_path %>
+SyslogIdentifier=kafka
 ExecStart=/bin/bash $KAFKA_RUN $KAFKA_ARGS $KAFKA_CONFIG
 TimeoutSec=10
 TimeoutStopSec=<%= @kill_timeout %>
-Restart=always
-RestartSec=3
 <% if @ulimit %>
 LimitNOFILE=<%= @ulimit %>
 <% end %>
-
 
 [Install]
 WantedBy=multi-user.target

@@ -25,14 +25,14 @@ Furthermore, Kafka requires ZooKeeper for coordination, and this cookbook does
 not install or manage ZooKeeper to any extent.
 A general recommendation is to not run Kafka and ZooKeeper on the same hardware.
 
-Ruby 1.9.3+ and Chef 11.6.0+.
+Chef 12.1.0+.
 
 ### Platform
 
 * Amazon Linux
-* CentOS 6.5 and 7
-* Debian 7.4
-* Fedora 20
+* CentOS 6 and 7
+* Debian 7 and 8
+* Fedora 21
 * Ubuntu 14.04
 
 The platforms / versions listed above are the ones that are included in
@@ -46,25 +46,18 @@ with attributes), attributes are documented inline (in the `attribute` files
 that is).
 
 Attributes concerning configuration of a Kafka broker are to be set under the
-`broker` namespace, and one can choose which ever syntax they prefer the most,
-the following are all valid ways to define broker configuration:
+`broker` namespace, as such:
 
 ```ruby
-node.default.kafka.broker[:log_dirs] = %w[/tmp/kafka-logs]
-node.default.kafka.broker['log.dirs'] = %w[/tmp/kafka-logs]
-node.default.kafka.broker.log.dirs = %w[/tmp/kafka-logs]
-node.default[:kafka][:broker][:log][:dirs] = %w[/tmp/kafka-logs]
+node.default['kafka']['broker']['log.dirs'] = %w[/tmp/kafka-logs]
+node.default['kafka']['broker']['num.io.threads'] = 4
+node.default['kafka']['broker']['zookeeper.connect'] = %w[localhost:2181]
 ```
 
 The attribute names match the configuration names that Kafka uses to make it
 easier to support new and old versions of Kafka simultaneously, by avoiding
 "hardcoded" attribute names for configuration options, so please refer to the
 official documentation for the release at your hand.
-
-A warning regarding the "dotted" notation, it doesn't play very well when
-setting attributes like `default.replication.factor` or
-`fetch.purgatory.purge.interval.requests` due to fairly obvious reasons
-(`default` and `fetch` are also methods).
 
 Refer to the official documentation for the version of Kafka that you're
 installing.
@@ -77,7 +70,7 @@ This section describes the different recipes that are available.
 ### default
 
 Downloads and installs Kafka from the official binary releases.
-Defaults to installing `v0.8.1.1` of Kafka.
+Defaults to installing `v1.0.0` of Kafka.
 
 ## Controlling restart of Kafka brokers in a cluster
 
@@ -121,14 +114,10 @@ ruby_block 'restart-coordination' do
     Chef::Log.info 'Implement the process to coordinate the restart, like using ZK'
   end
   action :nothing
-  notifies :restart, 'service[kafka]', :delayed
+  # `kafka_service_resource` is a helper method that will return the correct
+  # resource name depending on whether you're using `runit` or not.
+  notifies :restart, kafka_service_resource, :delayed
   notifies :create, 'ruby_block[restart-coordination-cleanup]', :delayed
-end
-
-service 'kafka' do
-  provider kafka_init_opts[:provider]
-  supports start: true, stop: true, restart: true, status: true
-  action kafka_service_actions
 end
 
 ruby_block 'restart-coordination-cleanup' do
@@ -198,7 +187,7 @@ a sufficiently high value.
 
 ## Copyright
 
-Copyright :: 2013-2016 Mathias Söderberg and contributors
+Copyright :: 2013-2017 Mathias Söderberg and contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

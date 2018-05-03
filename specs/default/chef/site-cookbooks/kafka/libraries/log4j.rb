@@ -6,7 +6,7 @@
 module Kafka
   module Log4J
     def render_appender(name, options)
-      prefix = 'log4j.appender.%s' % name
+      prefix = format('log4j.appender.%s', name)
       content = []
       options.each do |key, value|
         case key.to_sym
@@ -15,21 +15,17 @@ module Kafka
         when :layout
           content += render_layout(prefix, value)
         else
-          if value.respond_to?(:call)
-            content << %(#{prefix}.#{camelcase(key)}=#{value.call})
-          else
-            content << %(#{prefix}.#{camelcase(key)}=#{value})
-          end
+          content << %(#{prefix}.#{camelcase(key)}=#{value.respond_to?(:call) ? value.call : value})
         end
       end
       content.join($/) << newline
     end
 
     def render_logger(name, options)
-      level_appender = options.values_at(:level, :appender).compact.join(', ')
-      definition = 'log4j.logger.%s=%s' % [name, level_appender]
+      level_appender = [options['level'], options['appender']].compact.join(', ')
+      definition = format('log4j.logger.%s=%s', name, level_appender)
       content = [definition]
-      unless (additivity = options[:additivity]).nil?
+      unless (additivity = options['additivity']).nil?
         content << %(log4j.additivity.#{name}=#{additivity})
       end
       content.join($/) << newline
@@ -38,7 +34,7 @@ module Kafka
     private
 
     def render_layout(prefix, options)
-      layout_prefix = '%s.layout' % prefix
+      layout_prefix = format('%s.layout', prefix)
       options.each_with_object([]) do |(k, v), acc|
         if k.to_sym == :type
           acc.unshift(%(#{layout_prefix}=#{v}))
@@ -49,7 +45,7 @@ module Kafka
     end
 
     def camelcase(s)
-      s.split('_').reduce('') { |acc, p| acc << p.capitalize }
+      s.split('_').reduce('') { |a, e| a << e.capitalize }
     end
 
     def newline

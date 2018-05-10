@@ -34,16 +34,18 @@ def kafka_ready():
     if not is_zk_ready:
         return False, 'Zookeeper service not running', ''
     
-    is_kafka_service_ready = kafka_service_ready()
-    if not is_kafka_service_ready:
-        return False, 'Kafka service not running', ''
-    
     # 5 minutes from now
     deadline = timeout + time.time()
     success = False
     stdout = ''
     stderr = ''
     while time.time() < deadline:
+        # the kafka service cannot start until
+        # zookeeper has reached quorum, which can take a while
+        if not kafka_service_ready():
+            stdout = 'Kafka service not running'
+            continue
+        
         p, stdout, stderr = _kafka_ready()
         if p.returncode == 0:
             last_line = stdout.strip().split('\n')[-1]

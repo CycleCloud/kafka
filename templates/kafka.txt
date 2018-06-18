@@ -19,7 +19,7 @@ Order = 10
         ParameterType = Cloud.Credentials
 
         [[[parameter Region]]]
-        Label = Location
+        Label = Region
         Description = Deployment Location
         ParameterType = Cloud.Region
 	DefaultValue = westus2
@@ -27,6 +27,14 @@ Order = 10
     [[parameters Node Access]]
     Description = "Specify the credentials required for access to the node.  The Keypair Path specifies the path on local machines for cyclecloud CLI access."
     Order = 20
+
+        [[[parameter awsKeypair]]]
+        Label = AWS Keypair
+        Description = The keypair to connect with
+        ParameterType = AWS.Keypair
+        DefaultValue = cyclecloud
+        Conditions.Required := CloudProvider === "AWS"
+        Conditions.Excluded := CloudProvider !== "AWS"
 
         [[[parameter keypairLocation]]]
         Label = Keypair Path
@@ -38,15 +46,15 @@ Order = 10
         Label = Username
         Description = The username for the built-in local user on all nodes for direct ssh access.
         DefaultValue = cyclecloud
-        Conditions.Required := startswith("cycle.image.win", ImageName)
-        Conditions.Excluded := !startswith("cycle.image.win", ImageName)
+        Conditions.Required := (CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+        Conditions.Excluded := !(CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
 
         [[[parameter Password]]]
         Label = Password
         ParameterType = Password
         Description = The password for the built-in local user on all nodes for direct ssh access.
-        Conditions.Required := startswith("cycle.image.win", ImageName)
-        Conditions.Excluded := !startswith("cycle.image.win", ImageName)
+        Conditions.Required := (CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
+        Conditions.Excluded := !(CloudProvider === "Azure" && startswith("cycle.image.win", ImageName))
 
 
 [parameters Cluster Software]
@@ -68,15 +76,9 @@ Description = Specify the scheduling software, and base OS installed on all node
         Description = Select the Kafka project version
         Hidden = true
 
-        [[[parameter StageResources]]]
-        Label = Stage Resources
-        DefaultValue = true
-        Description = whether or not to stage resources
-        Hidden = true
-
         [[[parameter ZookeeperProjectVersion]]]
         Label = ZK Project Version
-        DefaultValue = 1.3.0
+        DefaultValue = 1.4.0
         Description = Select the Zookeeper project version
         Hidden = true
 
@@ -105,42 +107,97 @@ Order = 30
         Label = Proxy
         Description = The machine type for the optional proxy host
         ParameterType = Cloud.MachineType
-        DefaultValue = Standard_A2
+            [[[[record Config.ProviderDefaults]]]]
+            AWS = m3.large 
+            Azure = Standard_A2_v2
+            GCP = n1-standard-4
+
 
        [[[parameter BrokerMachineType]]]
        Label = Broker
        Description = The machine type for the Kafka brokers
        ParameterType = Cloud.MachineType
-       DefaultValue = Standard_DS4_v2 
+           [[[[record Config.ProviderDefaults]]]]
+           AWS = m3.large 
+           Azure = Standard_DS4_v2 
+           GCP = n1-standard-4
 
     [[parameter EnableTerminationProtection]]
     Label = Term Protection
     DefaultValue = false
     Widget.Plugin = pico.form.BooleanCheckBox
     Widget.Label = Enable Termination Protection?
+
+    [[parameter BrokerGcpTagList]]
+    Label = Tag List
+    ParameterType = StringList
+    Conditions.Excluded := CloudProvider !== "GCP"
     
+    [[parameter ZookeeperAccessArn]]
+    Label = IAM Profile
+    DefaultValue := undefined
+    Conditions.Excluded := CloudProvider !== "AWS"
+
 
 [parameters Networking]
 Order = 50
 
+    [[parameters AWS]]
+    Order = 20
+    Conditions.Excluded := CloudProvider !== "AWS"
+    Description = "Optional use of VPC components. Without specifying a subnet or security group the hosts will be started in the default region, VPC and security group."
+    
+        [[[parameter AwsProxySubnetId]]]
+        Label = Proxy Subnet
+        ParameterType = AWS.Subnet
+        Description = The subnet ID to use when in a VPC environment.
+        Conditions.Excluded := CloudProvider !== "AWS"
+
+        [[[parameter AwsSubnetId]]]
+        Label = VPC Subnets
+        ParameterType = AWS.Subnet
+        AutoSelect = true
+        Description = The subnet ID to use when in a VPC environment.
+        Conditions.Excluded := CloudProvider !== "AWS"
+
+        [[[parameter ZookeeperSecurityGroups]]]
+        Label = VPC Security Group
+        Description = "The security group ID(s) to use when in a VPC environment. Can be comma-separated list for multiple security groups. eg: sg-a0000001, sg-a0000002."
+        ParameterType = AWS.SecurityGroupList
+
     [[parameters Azure Virtual Network Configuration]]
     Order = 40
+    Conditions.Excluded := CloudProvider !== "Azure"
 
         [[[parameter AzureSubnetId]]]
         Label = Subnet ID
         Description = Subnet Resource Path (ResourceGroup/VirtualNetwork/Subnet)
         ParameterType = Azure.Subnet
+        Conditions.Required := CloudProvider === "Azure"
+        Conditions.Excluded := CloudProvider !== "Azure"
 
-    [[parameter ExecuteNodesPublic]]
+    [[parameters Google Compute Network Configuration]]
+    Order = 40
+    Description = No custom configuration required.
+    Conditions.Excluded := CloudProvider !== "GCP"
+
+    [[[parameter UsePublicNetwork]]]
+    Label = Public Networking
+    DefaultValue = true
+    ParameterType = Boolean
+    Config.Label = Allow access from the Internet
+
+    [[[parameter ExecuteNodesPublic]]]
     Label = Public Execute
     DefaultValue = false
-    Widget.Plugin = pico.form.BooleanCheckBox
-    Widget.Label = Make the Kafka broker instances accessible from the Internet
+    ParameterType = Boolean
+    Config.Label = Make the Kafka broker instances accessible from the Internet
+    Conditions.Excluded := UsePublicNetwork isnt true
 
 
 [cluster Kafka]
 FormLayout = selectionpanel
-IconUrl = http://download.cyclecomputing.com/logos/kafka-192x192.png
+IconUrl = static/cloud/cluster/ui/ClusterIcon/kafka-icon.png
 
 # Enable/disable autoscaling
 Autoscale = false
@@ -151,11 +208,18 @@ Autoscale = false
     [[node defaults]]
     TerminationProtection = $EnableTerminationProtection
     ImageName = $ImageName
-    StageResources = $StageResources
+    UsePublicNetwork = $UsePublicNetwork
+
     # Chef and Locker Config
     Credentials = $Credentials
+
+    # EC2
+    AWS.InstanceProfileArn=$ZookeeperAccessArn
+    KeyPair = $AwsKeypair
     KeyPairLocation = $KeypairLocation
-    SubnetId = $AzureSubnetId
+    SecurityGroups = $ZookeeperSecurityGroups
+
+    SubnetId = ${IfThenElse(CloudProvider==="Azure", AzureSubnetId, AwsSubnetId)}
 
     # Azure
     Region = $Region
@@ -175,10 +239,11 @@ Autoscale = false
      [[node proxy]]
      IsReturnProxy = true
      MachineType = $ProxyMachineType
-     SubnetId = $AzureSubnetId
+     SubnetId = ${IfThenElse(CloudProvider==="Azure", AzureSubnetId, AwsProxySubnetId)}
 
          [[[configuration]]]
          run_list = recipe[cshared::directories], recipe[cuser], recipe[cshared::server], recipe[cganglia::server], recipe[cganglia::client]
+
          cyclecloud.discoverable = true
         
          # Configure Azure external input endpoints (for example SSH)
@@ -188,8 +253,8 @@ Autoscale = false
 
          [[[input-endpoint ganglia]]]
          PrivatePort = 8652
-         PublicPort = 8652
-         
+         PublicPort = 8652        
+
         [[[cluster-init kafka:client:$ProjectVersion]]]
 	Locker = cyclecloud
 	
@@ -197,11 +262,15 @@ Autoscale = false
     MachineType = $BrokerMachineType
     InitialCount = $EnsembleSize
     
+    TagList = $BrokerGcpTagList
+
+
          [[[network-interface]]]
          AssociatePublicIpAddress = $ExecuteNodesPublic
 
         [[[configuration]]]
-        run_list = recipe[cshared::client], recipe[cuser], recipe[cganglia::client]
+	run_list = recipe[cshared::client], recipe[cuser], recipe[cganglia::client]
+	
         cyclecloud.discoverable = true
         zookeeper.mode = ensemble
         zookeeper.ensemble_size = $EnsembleSize
@@ -212,7 +281,6 @@ Autoscale = false
         kafka.md5_checksum = 45c7d032324e16c2e19a7d904a4d65c6
         # Auto-assign the broker id (manual assignment allows range [0..1000]
         kafka.broker.id = -1
-        kafka.broker.zookeeper.connect = localhost:2181
         kafka.broker.hostname = localhost
         kafka.broker.port = 9092
         kafka.init_style = systemd
